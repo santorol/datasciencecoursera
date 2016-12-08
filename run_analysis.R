@@ -52,7 +52,7 @@ colnames(Total_Acc_trainResults_x)<-c(paste("Sample",1:128))
 colnames(Body_Acc_trainResults_z)<-c(paste("Sample",1:128))
 colnames(Body_Acc_trainResults_y)<-c(paste("Sample",1:128))
 colnames(Body_Acc_trainResults_x)<-c(paste("Sample",1:128))
-colnames(TrainSet)<-c(paste("Sample",1:128))
+#Colnames(TrainSet)<-c(paste("Sample",1:128))
 #Test
 colnames(Gyro_testResults_z)<-c(paste("Sample",1:128))
 colnames(Gyro_testResults_y)<-c(paste("Sample",1:128))
@@ -137,7 +137,7 @@ TrainGyroReadings_x<-cbind(Gyro_trainResults_x,TrainSubjects,trainActLst)
 TrainTotalInertialReadings_x<-cbind(Total_Acc_trainResults_x,TrainSubjects,trainActLst)
 TrainAccReadings_x<-cbind(Body_Acc_trainResults_x,TrainSubjects,trainActLst)
 
-                    
+
 #Uses descriptive activity names to name the activities in the data set
 #Test
 
@@ -152,17 +152,64 @@ inertialData<-rbind(TestGyroReadings_z,TestTotalInertialReadings_z,TestAccReadin
 #Combine Results-Summary by columns - No key field so use cbind instead of merge
 train_combined<-cbind(TrainSet,trainActLst,TrainSubjects)
 test_combined<-cbind(TestSet,testActLst,TestSubjects)
-
+Test_Train_Combined<-rbind(train_combined,test_combined)
 
 
 
 
 #Extracts only the measurements on the mean and standard deviation for each measurement.
+#find the names in the data that have the word mean or in them
+mn_std<-Features[str_detect(Features$Feature,"mean|std"),]
+Train_Mean_Std<-train_combined[which(names(train_combined) %in% mn_std$Feature)]
+colnames(Train_Mean_Std)<-gsub("[[:punct:]]","",names(Train_Mean_Std))
+Train_Mean_Std<-cbind(Train_Mean_Std,train_combined[c("Activity","Subject")])
+Test_Mean_Std<-test_combined[which(names(test_combined) %in% mn_std$Feature)]
+colnames(Test_Mean_Std)<-gsub("[[:punct:]]","",names(Test_Mean_Std))
+Test_Mean_Std<-cbind(Test_Mean_Std,test_combined[c("Activity","Subject")])
+TT_Mean_Std<-rbind(Train_Mean_Std,Test_Mean_Std)
 
+#Housekeeping - Remove unneeded objects
+rm(Act_List,"Body_Acc_testResults_x","Body_Acc_testResults_y","Body_Acc_testResults_z",
+   "Body_Acc_trainResults_x","Body_Acc_trainResults_y","Body_Acc_trainResults_z","Features",                
+   "Gyro_testResults_x","Gyro_testResults_y","Gyro_testResults_z","Gyro_trainResults_x",       
+   "Gyro_trainResults_y","Gyro_trainResults_z" ,                              
+   "test_combined",                "Test_Mean_Std",                "Test_Train_Combined",          "TestAccReadings_x",           
+   "TestAccReadings_y" ,           "TestAccReadings_z"   ,         "TestActivities"    ,           "testActLst"   ,               
+   "TestGyroReadings_x" ,          "TestGyroReadings_y" ,          "TestGyroReadings_z"  ,         "TestSet" ,                    
+   "TestSubjects",                 "TestTotalInertialReadings_x" , "TestTotalInertialReadings_y",  "TestTotalInertialReadings_z" ,
+   "Total_Acc_testResults_x" ,     "Total_Acc_testResults_y",      "Total_Acc_testResults_z" ,     "Total_Acc_trainResults_x" ,   
+   "Total_Acc_trainResults_y"  ,   "Total_Acc_trainResults_z"  ,   "train_combined",  "Train_Mean_Std",              
+   "TrainAccReadings_x"     ,      "TrainAccReadings_y"  ,         "TrainAccReadings_z",           "TrainActivities"  ,           
+   "trainActLst" ,                 "TrainGyroReadings_x" ,         "TrainGyroReadings_y" ,         "TrainGyroReadings_z"   ,      
+   "TrainSet" ,                    "TrainSubjects",                "TrainTotalInertialReadings_x", "TrainTotalInertialReadings_y",
+   "TrainTotalInertialReadings_z")
 
-
-
-
+mn_std$Feature<-gsub("[[:punct:]]","",mn_std$Feature)
 
 #From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
 
+#Get the Average for each variable by activity by subject
+cnt<-0
+for (s in unique(TT_Mean_Std$Subject)){
+  for (a in unique(TT_Mean_Std$Activity))
+  {
+    AvgTT_temp<-as.data.frame(lapply(select(filter(TT_Mean_Std,Subject==s , Activity==a),-(80:81)),mean))
+    if (complete.cases(AvgTT_temp)){
+      AvgTT_temp<-cbind(AvgTT_temp,"Subject"=s,"Activity"=a)
+      if (cnt==0)
+        AvgTT<-AvgTT_temp
+      else AvgTT<-rbind(AvgTT,AvgTT_temp) 
+      cnt=cnt+1 
+    }
+    cnt=cnt+1
+  }
+  cnt=cnt+1
+}
+
+#Find the 
+#Write it to a file
+AvgTT<- arrange(AvgTT,Subject,Activity)
+write.table(AvgTT,"Avg_TT",row.name=FALSE)
+
+
+  
